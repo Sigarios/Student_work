@@ -1,0 +1,71 @@
+name: Student Code Check
+
+on:
+  push:
+    branches: [ master ]
+  pull_request:
+    branches: [ master ]
+
+jobs:
+  student-test:
+    runs-on: ubuntu-latest
+    
+    steps:
+    - uses: actions/checkout@v3
+    
+    - name: Check README.md exists
+      run: test -f README.md
+      
+    - name: Check src directory exists
+      run: test -d src
+      
+    - name: Check Hello World program
+      run: |
+        cd src
+        # Ищем и выполняем первый найденный исполняемый файл
+        for file in *; do
+          if [[ -f "$file" && -x "$file" ]]; then
+            output=$("./$file")
+            if [[ "$output" == "Hello world" ]]; then
+              echo "✅ Программа выводит 'Hello world'"
+              exit 0
+            fi
+          fi
+        done
+        
+        # Если не нашли исполняемый файл, пробуем интерпретаторы
+        for file in *; do
+          if [[ -f "$file" ]]; then
+            case "$file" in
+              *.py)
+                output=$(python "$file")
+                ;;
+              *.js)
+                output=$(node "$file")
+                ;;
+              *.sh)
+                output=$(bash "$file")
+                ;;
+              *.java)
+                javac "$file"
+                classname=$(basename "$file" .java)
+                output=$(java "$classname")
+                ;;
+              *.cpp|*.c)
+                g++ "$file" -o "${file%.*}"
+                output=$("./${file%.*}")
+                ;;
+              *)
+                continue
+                ;;
+            esac
+            
+            if [[ "$output" == "Hello world" ]]; then
+              echo "✅ Программа выводит 'Hello world'"
+              exit 0
+            fi
+          fi
+        done
+        
+        echo "❌ Не найдена программа, выводящая 'Hello world'"
+        exit 1
